@@ -13,14 +13,11 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-
+import com.google.android.gms.common.SignInButton;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
-
-import com.google.android.gms.common.SignInButton;
-
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,7 +28,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        FirebaseApp.initializeApp(this); // Inisialisasi Firebase
+        FirebaseApp.initializeApp(this);
+        mAuth = FirebaseAuth.getInstance();
+
+        // Jika sudah login, langsung ke dashboard
+        if (mAuth.getCurrentUser() != null) {
+            redirectBasedOnRole();
+            return;
+        }
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
@@ -41,11 +46,35 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        mAuth = FirebaseAuth.getInstance();
+        initLoginViews();
+    }
+
+    private void redirectBasedOnRole() {
+        String uid = mAuth.getCurrentUser().getUid();
+        DatabaseReference userRef = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(uid);
+
+        userRef.get().addOnSuccessListener(snapshot -> {
+            User user = snapshot.getValue(User.class);
+            if (user != null && "admin".equalsIgnoreCase(user.role)) {
+                startActivity(new Intent(this, AdminDashboardActivity.class));
+            } else {
+                startActivity(new Intent(this, UserDashboardActivity.class));
+            }
+            finish();
+        }).addOnFailureListener(e ->
+                Toast.makeText(this, "Gagal mengambil data user: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show()
+        );
+    }
+
+    private void initLoginViews() {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
         btnRegister = findViewById(R.id.btnRegister);
+        SignInButton btnGoogleSignIn = findViewById(R.id.btnGoogleLogin);
 
         btnLogin.setOnClickListener(v -> {
             String email = etEmail.getText().toString().trim();
@@ -65,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             String userId = mAuth.getCurrentUser().getUid();
-
                             DatabaseReference userRef = FirebaseDatabase.getInstance()
                                     .getReference("users")
                                     .child(userId);
@@ -73,42 +101,34 @@ public class MainActivity extends AppCompatActivity {
                             userRef.get().addOnCompleteListener(task1 -> {
                                 if (task1.isSuccessful()) {
                                     User user = task1.getResult().getValue(User.class);
-
                                     if (user != null) {
                                         if ("admin".equalsIgnoreCase(user.role)) {
-                                            startActivity(new Intent(MainActivity.this, AdminDashboardActivity.class));
+                                            startActivity(new Intent(this, AdminDashboardActivity.class));
                                         } else {
-                                            startActivity(new Intent(MainActivity.this, UserDashboardActivity.class));
+                                            startActivity(new Intent(this, UserDashboardActivity.class));
                                         }
                                         finish();
                                     } else {
-                                        Toast.makeText(MainActivity.this, "Data user tidak ditemukan", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(this, "Data user tidak ditemukan", Toast.LENGTH_LONG).show();
                                     }
                                 } else {
-                                    Toast.makeText(MainActivity.this, "Gagal mengambil data user", Toast.LENGTH_LONG).show();
+                                    Toast.makeText(this, "Gagal mengambil data user", Toast.LENGTH_LONG).show();
                                 }
                             });
                         } else {
                             String errorMessage = task.getException() != null ?
                                     task.getException().getMessage() : "Login gagal, coba lagi";
-
-                            Toast.makeText(MainActivity.this, "Login gagal: " + errorMessage, Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, "Login gagal: " + errorMessage, Toast.LENGTH_LONG).show();
                         }
                     });
         });
 
-        btnRegister.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
-            startActivity(intent);
-        });
+        btnRegister.setOnClickListener(v ->
+                startActivity(new Intent(this, RegisterActivity.class))
+        );
 
-        SignInButton btnGoogleSignIn = findViewById(R.id.btnGoogleLogin);
-
-
-        btnGoogleSignIn.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, GoogleSignInActivity.class);
-            startActivity(intent);
-        });
-
-
-    }}
+        btnGoogleSignIn.setOnClickListener(v ->
+                startActivity(new Intent(this, GoogleSignInActivity.class))
+        );
+    }
+}

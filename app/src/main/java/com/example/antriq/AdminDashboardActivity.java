@@ -25,6 +25,7 @@ public class AdminDashboardActivity extends AppCompatActivity implements QueueAd
 
     private TextView tvWelcomeAdmin;
     private Button btnAddQueue;
+    private Button btnLogout;
     private RecyclerView rvQueues;
     private QueueAdapter queueAdapter;
     private List<Queue> queueList = new ArrayList<>();
@@ -44,11 +45,23 @@ public class AdminDashboardActivity extends AppCompatActivity implements QueueAd
 
         tvWelcomeAdmin = findViewById(R.id.tvWelcomeAdmin);
         btnAddQueue = findViewById(R.id.btnAddQueue);
+
         rvQueues = findViewById(R.id.rvQueues);
 
         rvQueues.setLayoutManager(new LinearLayoutManager(this));
         queueAdapter = new QueueAdapter(queueList, this);
         rvQueues.setAdapter(queueAdapter);
+
+        btnLogout = findViewById(R.id.btnLogout);
+
+        btnLogout.setOnClickListener(v -> {
+            FirebaseAuth.getInstance().signOut();
+            Intent intent = new Intent(AdminDashboardActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); // hapus back stack
+            startActivity(intent);
+            finish();
+        });
+
 
         loadAdminName();
         loadQueues();
