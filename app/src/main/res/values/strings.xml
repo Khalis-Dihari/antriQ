@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AntriQ</string>
+    <string name="web_client">521192215264-vssknhr3vi9fk6hhn27b2qo4of051759.apps.googleusercontent.com</string>
+    <string name="title_activity_google_sign_in">GoogleSignInActivity</string>
+</resources>
