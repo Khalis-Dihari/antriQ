@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
+    android:padding="12dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="12dp">
+    android:background="@android:color/white"
+    android:elevation="2dp"
+    android:layout_marginBottom="8dp">
 
-    <!-- ① Baris utama (selalu terlihat) -->
+    <!-- Header (nama, nomor, status) -->
     <LinearLayout
-        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:gravity="center_vertical">
 
         <LinearLayout
-            android:orientation="vertical"
-            android:layout_weight="1"
             android:layout_width="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
             android:layout_height="wrap_content">
 
             <TextView
                 android:id="@+id/tvName"
-                android:text="Nama User"
+                android:text="Nama Pengguna"
                 android:textStyle="bold"
                 android:textSize="16sp"
                 android:layout_width="wrap_content"
@@ -39,55 +42,61 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
-        <!-- ikon panah untuk indikasi expand -->
         <ImageView
             android:id="@+id/ivArrow"
+            android:src="@android:drawable/arrow_down_float"
             android:layout_width="24dp"
-            android:layout_height="24dp" />
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp" />
     </LinearLayout>
 
-    <!-- ② Panel detail (aksi) - default: gone -->
+    <!-- Panel detail -->
     <LinearLayout
         android:id="@+id/panelDetail"
+        android:visibility="gone"
         android:orientation="vertical"
-        android:layout_marginTop="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone">
+        android:layout_marginTop="8dp">
 
         <Button
             android:id="@+id/btnChangeStatus"
             android:text="Ubah Status"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <Button
-            android:id="@+id/btnDelete"
-            android:text="Hapus Antrian"
-            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:backgroundTint="@android:color/holo_blue_light" />
 
-        <!-- ③ Sub-panel ganti status -->
+        <!-- Panel status (spinner dan simpan) -->
         <LinearLayout
             android:id="@+id/panelStatus"
-            android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
             android:visibility="gone">
 
             <Spinner
                 android:id="@+id/spStatus"
-                android:layout_weight="1"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
 
             <Button
                 android:id="@+id/btnSaveStatus"
                 android:text="Simpan"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="@android:color/holo_green_light" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/btnDelete"
+            android:text="Hapus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@android:color/holo_red_light" />
     </LinearLayout>
+
 </LinearLayout>
