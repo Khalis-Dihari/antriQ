@@ -1,4 +1,3 @@
-// File: com.example.antriq.model.UserInQueue.java
 package com.example.antriq;
 
 public class UserInQueue {
@@ -8,19 +7,17 @@ public class UserInQueue {
     public String status;
     public int number;
     public String userId;
+    public long timestamp; // <== TAMBAH INI
 
-    public UserInQueue() {
-        // Diperlukan oleh Firebase
-    }
+    public UserInQueue() {}
 
-    public UserInQueue(String name, String email, String role, String status, int number, String userId) {
+    public UserInQueue(String name, String email, String role, String status, int number, String userId, long timestamp) {
         this.name = name;
         this.email = email;
         this.role = role;
         this.status = status;
         this.number = number;
         this.userId = userId;
+        this.timestamp = timestamp; // <== INISIALISASI
     }
-
-    // Optional: Getter-setter jika dibutuhkan adapter atau view
 }

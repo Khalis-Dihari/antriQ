@@ -1,3 +1,4 @@
+// Final ScanQRActivity.java versi otomatis
 package com.example.antriq;
 
 import android.content.Intent;
@@ -12,8 +13,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
 
 import com.google.zxing.integration.android.IntentIntegrator;
-import com.journeyapps.barcodescanner.CaptureActivity;
 import com.google.zxing.integration.android.IntentResult;
+import com.journeyapps.barcodescanner.CaptureActivity;
 
 public class ScanQRActivity extends AppCompatActivity {
 
@@ -61,6 +62,7 @@ public class ScanQRActivity extends AppCompatActivity {
     private void joinQueue(String queueId) {
         DatabaseReference queueRef = FirebaseDatabase.getInstance().getReference("queues").child(queueId);
         DatabaseReference userRef = queueRef.child("users").child(uid);
+        DatabaseReference globalCounterRef = FirebaseDatabase.getInstance().getReference("globalQueueCounter");
 
         queueRef.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -69,22 +71,45 @@ public class ScanQRActivity extends AppCompatActivity {
                     Toast.makeText(ScanQRActivity.this, "Kamu sudah berada dalam antrian ini", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
-                    long queueNumber = snapshot.getChildrenCount() + 1;
+                    globalCounterRef.runTransaction(new Transaction.Handler() {
+                        @NonNull
+                        @Override
+                        public Transaction.Result doTransaction(@NonNull MutableData currentData) {
+                            Integer currentValue = currentData.getValue(Integer.class);
+                            if (currentValue == null) {
+                                currentData.setValue(1);
+                            } else {
+                                currentData.setValue(currentValue + 1);
+                            }
+                            return Transaction.success(currentData);
+                        }
 
-                    String name = currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "User";
-                    String email = currentUser.getEmail();
+                        @Override
+                        public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {
+                            if (committed && snapshot != null) {
+                                int globalNumber = snapshot.getValue(Integer.class);
 
-                    UserInQueue newUser = new UserInQueue(name, email, "user", "Menunggu", (int) queueNumber, uid);
+                                long timestamp = System.currentTimeMillis();
+                                String name = currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "User";
+                                String email = currentUser.getEmail();
 
-                    userRef.setValue(newUser)
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(ScanQRActivity.this, "Berhasil masuk antrian", Toast.LENGTH_SHORT).show();
-                                startActivity(new Intent(ScanQRActivity.this, UserDashboardActivity.class));
-                                finish();
-                            })
-                            .addOnFailureListener(e -> Toast.makeText(ScanQRActivity.this, "Gagal masuk antrian", Toast.LENGTH_SHORT).show());
+                                UserInQueue newUser = new UserInQueue(name, email, "user", "Menunggu", globalNumber, uid, timestamp);
+
+                                userRef.setValue(newUser).addOnSuccessListener(a -> {
+                                    Toast.makeText(ScanQRActivity.this, "Berhasil masuk antrian", Toast.LENGTH_SHORT).show();
+                                    startActivity(new Intent(ScanQRActivity.this, UserDashboardActivity.class));
+                                    finish();
+                                }).addOnFailureListener(e -> {
+                                    Toast.makeText(ScanQRActivity.this, "Gagal masuk antrian", Toast.LENGTH_SHORT).show();
+                                });
+                            } else {
+                                Toast.makeText(ScanQRActivity.this, "Gagal mengambil nomor global", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
                 }
             }
+
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Toast.makeText(ScanQRActivity.this, "Database error", Toast.LENGTH_SHORT).show();
