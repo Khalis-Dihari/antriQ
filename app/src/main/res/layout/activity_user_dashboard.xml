@@ -56,6 +56,16 @@
         android:textColor="#FFFFFF" />
 
     <Button
+        android:id="@+id/btnLeaveQueue"
+        android:layout_width="122dp"
+        android:layout_height="wrap_content"
+        android:backgroundTint="@android:color/holo_red_light"
+        android:text="Leave"
+        android:textAlignment="center"
+        android:textColorLink="#EDEDED" />
+
+
+    <Button
         android:id="@+id/btnLogout"
         android:layout_width="122dp"
         android:layout_height="wrap_content"
