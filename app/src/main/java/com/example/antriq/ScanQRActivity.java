@@ -8,22 +8,30 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.journeyapps.barcodescanner.CaptureActivity;
-import com.journeyapps.barcodescanner.ScanIntentResult;
 import com.google.zxing.integration.android.IntentResult;
 
 public class ScanQRActivity extends AppCompatActivity {
 
-    private String userId;
+    private FirebaseUser currentUser;
+    private String uid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        userId = FirebaseAuth.getInstance().getCurrentUser().getEmail().replace(".", "_");
+        currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "User tidak terautentikasi", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        uid = currentUser.getUid();
 
         IntentIntegrator integrator = new IntentIntegrator(this);
         integrator.setPrompt("Scan QR Antrian");
@@ -52,21 +60,23 @@ public class ScanQRActivity extends AppCompatActivity {
 
     private void joinQueue(String queueId) {
         DatabaseReference queueRef = FirebaseDatabase.getInstance().getReference("queues").child(queueId);
+        DatabaseReference userRef = queueRef.child("users").child(uid);
 
         queueRef.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.hasChild(userId)) {
+                if (snapshot.hasChild(uid)) {
                     Toast.makeText(ScanQRActivity.this, "Kamu sudah berada dalam antrian ini", Toast.LENGTH_SHORT).show();
                     finish();
                 } else {
                     long queueNumber = snapshot.getChildrenCount() + 1;
 
-                    UserInQueue newUser = new UserInQueue("NamaUser", userId, "user", "Menunggu", (int) queueNumber);
+                    String name = currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "User";
+                    String email = currentUser.getEmail();
 
+                    UserInQueue newUser = new UserInQueue(name, email, "user", "Menunggu", (int) queueNumber, uid);
 
-
-                    queueRef.child("users").child(userId).setValue(newUser)
+                    userRef.setValue(newUser)
                             .addOnSuccessListener(aVoid -> {
                                 Toast.makeText(ScanQRActivity.this, "Berhasil masuk antrian", Toast.LENGTH_SHORT).show();
                                 startActivity(new Intent(ScanQRActivity.this, UserDashboardActivity.class));

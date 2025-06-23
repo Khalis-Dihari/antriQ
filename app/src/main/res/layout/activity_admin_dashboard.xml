@@ -37,11 +37,12 @@
         android:id="@+id/tvListLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
         android:text="Daftar Antrian"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:paddingBottom="10dp"
         android:gravity="center" />
+
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -55,7 +56,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingBottom="20dp" />
+            android:paddingBottom="20dp"
+            android:contentDescription="Daftar antrian" />
+
     </FrameLayout>
 
 
@@ -70,5 +73,7 @@
         android:layout_marginBottom="16dp"
         android:textStyle="bold"
         android:padding="1dp" />
+
+
 
 </LinearLayout>

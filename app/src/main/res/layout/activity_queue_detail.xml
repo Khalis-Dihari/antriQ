@@ -1,12 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@android:color/background_light">
 
-    <RecyclerView
+    <TextView
+        android:id="@+id/tvTitle"
+        android:text="Detail Antrian"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <!-- Tombol hapus antrian -->
+    <Button
+        android:id="@+id/btnDeleteQueue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hapus Antrian"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="8dp"
+        android:layout_below="@id/tvTitle"
+        android:backgroundTint="@android:color/holo_red_light"
+        android:textColor="@android:color/white" />
+
+    <!-- RecyclerView di bawah tombol -->
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvQueueUsers"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_below="@id/btnDeleteQueue"
+        android:layout_marginTop="12dp" />
 
-</LinearLayout>
+</RelativeLayout>

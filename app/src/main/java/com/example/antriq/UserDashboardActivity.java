@@ -21,6 +21,7 @@ public class UserDashboardActivity extends AppCompatActivity {
 
     private TextView tvQueueNumber, tvStatus, tvTimer, tvAdminName;
     private Button btnScanQR;
+    private Button btnLogout;
 
     private String currentQueueId = null;
     private CountDownTimer countDownTimer;
@@ -32,10 +33,19 @@ public class UserDashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_user_dashboard);
 
         tvQueueNumber = findViewById(R.id.tvQueueNumber);
+        btnLogout = findViewById(R.id.btnLogout);
         tvStatus = findViewById(R.id.tvStatus);
         tvTimer = findViewById(R.id.tvTimer);
         tvAdminName = findViewById(R.id.tvAdminName);
         btnScanQR = findViewById(R.id.btnScanQR);
+
+        btnLogout.setOnClickListener(v -> {
+            FirebaseAuth.getInstance().signOut();
+            Intent intent = new Intent(UserDashboardActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); // hapus back stack
+            startActivity(intent);
+            finish();
+        });
 
         btnScanQR.setOnClickListener(v -> {
             Intent intent = new Intent(UserDashboardActivity.this, ScanQRActivity.class);
@@ -62,6 +72,7 @@ public class UserDashboardActivity extends AppCompatActivity {
                                 String adminId = queueSnapshot.child("adminId").getValue(String.class);
                                 updateUIWithQueueData(user);
                                 loadAdminName(adminId);
+                                observeUserStatusRealtime(currentQueueId, uid);
                                 break;
                             }
                         }
@@ -94,6 +105,28 @@ public class UserDashboardActivity extends AppCompatActivity {
         }
     }
 
+    private void observeUserStatusRealtime(String queueId, String uid) {
+        FirebaseDatabase.getInstance().getReference("queues")
+                .child(queueId)
+                .child("users")
+                .child(uid)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        UserInQueue user = snapshot.getValue(UserInQueue.class);
+                        if (user != null) {
+                            updateUIWithQueueData(user);
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(UserDashboardActivity.this, "Gagal memantau status", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+
     private void loadAdminName(String adminId) {
         FirebaseDatabase.getInstance().getReference("users")
                 .child(adminId)
@@ -121,6 +154,8 @@ public class UserDashboardActivity extends AppCompatActivity {
         tvStatus.setText("Status: -");
         tvTimer.setVisibility(View.GONE);
         tvAdminName.setText("Retail: -");
+
+        stopCountdownTimer();
     }
 
     private void startCountdownTimer() {
