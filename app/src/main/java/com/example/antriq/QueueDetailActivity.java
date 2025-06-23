@@ -49,7 +49,6 @@ public class QueueDetailActivity extends AppCompatActivity
 
         setupQueueListeners();
 
-        // Handle klik tombol hapus antrian
         btnDeleteQueue.setOnClickListener(v -> showDeleteConfirmation());
     }
 
@@ -57,6 +56,7 @@ public class QueueDetailActivity extends AppCompatActivity
         DatabaseReference queueRef = FirebaseDatabase.getInstance()
                 .getReference("queues").child(queueId);
 
+        // Pantau jika antrian dihapus
         queueRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -74,6 +74,7 @@ public class QueueDetailActivity extends AppCompatActivity
             }
         });
 
+        // Pantau data user dalam antrian
         queueRef.child("users").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -83,7 +84,9 @@ public class QueueDetailActivity extends AppCompatActivity
                 for (DataSnapshot snap : snapshot.getChildren()) {
                     UserInQueue u = snap.getValue(UserInQueue.class);
                     if (u != null) {
+                        u.userId = snap.getKey(); // Ambil userId dari key Firebase
                         userList.add(u);
+
                         String status = u.status;
                         if (status != null && (
                                 status.equals("Menunggu") ||
@@ -125,7 +128,7 @@ public class QueueDetailActivity extends AppCompatActivity
                 .child(queueId)
                 .removeValue()
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Antrian dihapus", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Antrian berhasil dihapus", Toast.LENGTH_SHORT).show();
                     redirectToDashboard();
                 })
                 .addOnFailureListener(e -> {
