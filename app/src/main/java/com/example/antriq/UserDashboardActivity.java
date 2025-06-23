@@ -1,11 +1,12 @@
 package com.example.antriq;
 
-import android.net.Uri;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.*;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -14,7 +15,7 @@ import com.google.firebase.database.*;
 
 public class UserDashboardActivity extends AppCompatActivity {
 
-    private TextView tvQueueNumber, tvStatus, tvTimer, tvAdminName;
+    private TextView tvQueueNumber, tvStatus, tvTimer, tvAdminName, tvCurrentServing;
     private Button btnScanQR, btnLogout, btnLeaveQueue, btnOpenMaps;
 
     private String currentQueueId = null;
@@ -30,10 +31,17 @@ public class UserDashboardActivity extends AppCompatActivity {
         tvStatus = findViewById(R.id.tvStatus);
         tvTimer = findViewById(R.id.tvTimer);
         tvAdminName = findViewById(R.id.tvAdminName);
+        tvCurrentServing = findViewById(R.id.textView); // <<== Ini TextView untuk antrian saat ini
         btnScanQR = findViewById(R.id.btnScanQR);
         btnLogout = findViewById(R.id.btnLogout);
         btnLeaveQueue = findViewById(R.id.btnLeaveQueue);
-        btnOpenMaps = findViewById(R.id.btn_open_maps); // ✅ pindahkan ke sini
+        btnOpenMaps = findViewById(R.id.btn_open_maps);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            startActivity(new Intent(this, MainActivity.class));
+            finish();
+            return;
+        }
 
         btnLogout.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
@@ -61,7 +69,6 @@ public class UserDashboardActivity extends AppCompatActivity {
             }
         });
 
-        // ✅ Tambahkan listener button open maps
         btnOpenMaps.setOnClickListener(v -> {
             Uri gmmIntentUri = Uri.parse("https://maps.app.goo.gl/JfwkPEey2Kj336kDA");
             Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
@@ -69,49 +76,51 @@ public class UserDashboardActivity extends AppCompatActivity {
             if (mapIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(mapIntent);
             } else {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
-                startActivity(browserIntent);
+                startActivity(new Intent(Intent.ACTION_VIEW, gmmIntentUri));
             }
         });
 
         checkStatus();
     }
 
-    // (sisa kode tidak berubah)
-
-
     private void checkStatus() {
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        FirebaseDatabase.getInstance().getReference("queues")
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override public void onDataChange(@NonNull DataSnapshot ds) {
-                        boolean found = false;
-                        for (DataSnapshot q : ds.getChildren()) {
-                            if (q.child("users").hasChild(uid)) {
-                                found = true;
-                                currentQueueId = q.getKey();
-                                UserInQueue user = q.child("users").child(uid).getValue(UserInQueue.class);
-                                String adminId = q.child("adminId").getValue(String.class);
-                                if (user != null) {
-                                    bindUI(user, adminId);
-                                    listenRealtime();
-                                }
-                                break;
-                            }
+        DatabaseReference queuesRef = FirebaseDatabase.getInstance().getReference("queues");
+
+        queuesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot ds) {
+                boolean found = false;
+                for (DataSnapshot q : ds.getChildren()) {
+                    if (q.child("users").hasChild(uid)) {
+                        found = true;
+                        currentQueueId = q.getKey();
+                        UserInQueue user = q.child("users").child(uid).getValue(UserInQueue.class);
+                        String adminId = q.child("adminId").getValue(String.class);
+                        if (user != null) {
+                            bindUI(user, adminId);
+                            listenRealtime(); // Realtime user status
+                            listenCurrentServing(); // Realtime antrian saat ini
                         }
-                        if (!found) resetUI();
+                        break;
                     }
-                    @Override public void onCancelled(@NonNull DatabaseError e) { }
-                });
+                }
+                if (!found) resetUI();
+            }
+
+            @Override public void onCancelled(@NonNull DatabaseError e) { }
+        });
     }
 
     private void bindUI(UserInQueue u, String adminId) {
         btnScanQR.setVisibility(View.GONE);
         tvQueueNumber.setText("Nomor Antrian: " + format(u.number));
         tvStatus.setText("Status: " + u.status);
-        btnLeaveQueue.setVisibility(u.status.equals("Selesai") || u.status.equals("Dibatalkan") ? View.VISIBLE : View.GONE);
+        btnLeaveQueue.setVisibility(
+                u.status.equals("Selesai") || u.status.equals("Dibatalkan") ? View.VISIBLE : View.GONE
+        );
         if ("Dipanggil".equals(u.status)) startTimer(); else stopTimer();
         btnOpenMaps.setVisibility(View.VISIBLE);
+
         FirebaseDatabase.getInstance().getReference("users").child(adminId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override public void onDataChange(@NonNull DataSnapshot s) {
@@ -124,16 +133,56 @@ public class UserDashboardActivity extends AppCompatActivity {
 
     private void listenRealtime() {
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        FirebaseDatabase.getInstance().getReference("queues")
+        DatabaseReference userRef = FirebaseDatabase.getInstance()
+                .getReference("queues")
                 .child(currentQueueId)
                 .child("users")
-                .child(uid)
+                .child(uid);
+
+        userRef.addValueEventListener(new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot s) {
+                UserInQueue u = s.getValue(UserInQueue.class);
+                if (u != null) {
+                    FirebaseDatabase.getInstance().getReference("queues")
+                            .child(currentQueueId)
+                            .child("adminId")
+                            .addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                    String adminId = snapshot.getValue(String.class);
+                                    bindUI(u, adminId);
+                                }
+
+                                @Override public void onCancelled(@NonNull DatabaseError error) {}
+                            });
+                }
+            }
+
+            @Override public void onCancelled(@NonNull DatabaseError e) {}
+        });
+    }
+
+    // 🔴 Realtime listener untuk antrian saat ini
+    private void listenCurrentServing() {
+        DatabaseReference queueUsersRef = FirebaseDatabase.getInstance()
+                .getReference("queues")
+                .child(currentQueueId)
+                .child("users");
+
+        queueUsersRef.orderByChild("status").equalTo("Sedang Dilayani")
                 .addValueEventListener(new ValueEventListener() {
-                    @Override public void onDataChange(@NonNull DataSnapshot s) {
-                        UserInQueue u = s.getValue(UserInQueue.class);
-                        if (u != null) bindUI(u, u.role); // role unused here
+                    @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        String current = "-";
+                        for (DataSnapshot s : snapshot.getChildren()) {
+                            UserInQueue u = s.getValue(UserInQueue.class);
+                            if (u != null) {
+                                current = format(u.number);
+                                break;
+                            }
+                        }
+                        tvCurrentServing.setText("Antrian Saat Ini: " + current);
                     }
-                    @Override public void onCancelled(@NonNull DatabaseError e) {}
+
+                    @Override public void onCancelled(@NonNull DatabaseError error) {}
                 });
     }
 
@@ -143,6 +192,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         tvStatus.setText("Status: -");
         tvTimer.setVisibility(View.GONE);
         tvAdminName.setText("Retail: -");
+        tvCurrentServing.setText("Antrian Saat Ini: -");
         btnLeaveQueue.setVisibility(View.GONE);
         btnOpenMaps.setVisibility(View.GONE);
         stopTimer();
@@ -150,13 +200,16 @@ public class UserDashboardActivity extends AppCompatActivity {
 
     private void startTimer() {
         tvTimer.setVisibility(View.VISIBLE);
-        stopTimer();
+        stopTimer(); // clear previous
         timer = new CountDownTimer(DURATION_MS, 1000) {
             @Override public void onTick(long millis) {
                 tvTimer.setText(String.format("Timer: %02d:%02d",
-                        millis / (60*1000), (millis / 1000) % 60));
+                        millis / (60 * 1000), (millis / 1000) % 60));
             }
-            @Override public void onFinish() { tvTimer.setText("Timer habis"); }
+
+            @Override public void onFinish() {
+                tvTimer.setText("Timer habis");
+            }
         }.start();
     }
 
@@ -164,5 +217,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         if (timer != null) timer.cancel();
     }
 
-    private String format(int num) { return String.format("%03d", num); }
+    private String format(int num) {
+        return String.format("%03d", num);
+    }
 }

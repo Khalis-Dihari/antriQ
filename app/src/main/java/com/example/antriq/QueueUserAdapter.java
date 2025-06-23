@@ -1,114 +1,109 @@
+// QueueUserAdapter.java
 package com.example.antriq;
 
-import android.view.*;
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.*;
 
-public class QueueUserAdapter extends RecyclerView.Adapter<QueueUserAdapter.UserVH> {
+public class QueueUserAdapter extends RecyclerView.Adapter<QueueUserAdapter.UserViewHolder> {
 
-    public interface OnUserClickListener {
-        void onUpdateStatus(UserInQueue user, String newStatus);
-        void onDelete(UserInQueue user);
+    private final Context context;
+    private final List<UserInQueue> userList;
+    private final String queueId;
+
+    public QueueUserAdapter(Context context, List<UserInQueue> userList, String queueId) {
+        this.context = context;
+        this.userList = userList;
+        this.queueId = queueId;
     }
 
-    private List<UserInQueue> data;
-    private final OnUserClickListener cb;
-    private int expandedPos = RecyclerView.NO_POSITION;
-
-    public QueueUserAdapter(List<UserInQueue> data, OnUserClickListener cb) {
-        this.data = data;
-        this.cb = cb;
-    }
-
-    public void setUserList(List<UserInQueue> newData) {
-        data = newData;
-        notifyDataSetChanged();
-    }
-
-    @NonNull @Override
-    public UserVH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_user_queue, parent, false);
-        return new UserVH(v);
+    @NonNull
+    @Override
+    public UserViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(context).inflate(R.layout.item_user_queue, parent, false);
+        return new UserViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull UserVH h, int pos) {
-        UserInQueue u = data.get(pos);
-        h.tvName.setText(u.name);
-        h.tvNumber.setText(String.format("No: %03d", u.number));
-        h.tvStatus.setText("Status: " + u.status);
+    public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
+        UserInQueue user = userList.get(position);
 
-        boolean expanded = pos == expandedPos;
-        h.panelDetail.setVisibility(expanded ? View.VISIBLE : View.GONE);
-        h.ivArrow.setRotation(expanded ? 180 : 0);
+        holder.tvName.setText(user.name);
+        holder.tvNumber.setText("No: " + String.format("%03d", user.number));
+        holder.tvStatus.setText("Status: " + user.status);
 
-        /* ==== klik item (expand / collapse) ==== */
-        h.itemView.setOnClickListener(v -> {
-            int old = expandedPos;
-            expandedPos = (expanded ? RecyclerView.NO_POSITION : pos);
-            notifyItemChanged(old);
-            notifyItemChanged(expandedPos);
+        // Expand/collapse panel
+        holder.ivArrow.setOnClickListener(v -> {
+            boolean isVisible = holder.panelDetail.getVisibility() == View.VISIBLE;
+            holder.panelDetail.setVisibility(isVisible ? View.GONE : View.VISIBLE);
         });
 
-        /* ==== tombol ubah status ==== */
-        h.btnChangeStatus.setOnClickListener(v -> {
-            h.panelStatus.setVisibility(
-                    h.panelStatus.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        // Tombol ubah status
+        holder.btnChangeStatus.setOnClickListener(v -> {
+            holder.panelStatus.setVisibility(View.VISIBLE);
         });
 
-        /* ==== spinner status ==== */
-        ArrayAdapter<String> spAdapter = new ArrayAdapter<>(h.itemView.getContext(),
-                android.R.layout.simple_spinner_item,
+        // Spinner status
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(context,
+                android.R.layout.simple_spinner_dropdown_item,
                 new String[]{"Menunggu", "Dipanggil", "Sedang Dilayani", "Selesai", "Dibatalkan"});
-        spAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        h.spStatus.setAdapter(spAdapter);
-        h.spStatus.setSelection(getStatusIndex(u.status));
+        holder.spStatus.setAdapter(adapter);
 
-        /* ==== simpan status ==== */
-        h.btnSaveStatus.setOnClickListener(v -> {
-            String newStatus = h.spStatus.getSelectedItem().toString();
-            cb.onUpdateStatus(u, newStatus);
-            h.panelStatus.setVisibility(View.GONE);
+        holder.btnSaveStatus.setOnClickListener(v -> {
+            String selectedStatus = holder.spStatus.getSelectedItem().toString();
+
+            FirebaseDatabase.getInstance().getReference("queues")
+                    .child(queueId)
+                    .child("users")
+                    .child(user.userId)
+                    .child("status")
+                    .setValue(selectedStatus);
+
+            holder.tvStatus.setText("Status: " + selectedStatus);
+            holder.panelStatus.setVisibility(View.GONE);
         });
 
-        /* ==== hapus ==== */
-        h.btnDelete.setOnClickListener(v -> cb.onDelete(u));
+        holder.btnDelete.setOnClickListener(v -> {
+            FirebaseDatabase.getInstance().getReference("queues")
+                    .child(queueId)
+                    .child("users")
+                    .child(user.userId)
+                    .removeValue();
+        });
     }
 
-    @Override public int getItemCount() { return data.size(); }
+    @Override
+    public int getItemCount() {
+        return userList.size();
+    }
 
-    /* ------------ ViewHolder ----------- */
-    static class UserVH extends RecyclerView.ViewHolder {
+    static class UserViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvNumber, tvStatus;
         ImageView ivArrow;
-        View panelDetail, panelStatus;
-        Button btnChangeStatus, btnDelete, btnSaveStatus;
+        LinearLayout panelDetail, panelStatus;
+        Button btnChangeStatus, btnSaveStatus, btnDelete;
         Spinner spStatus;
-        UserVH(View v) {
-            super(v);
-            tvName = v.findViewById(R.id.tvName);
-            tvNumber = v.findViewById(R.id.tvNumber);
-            tvStatus = v.findViewById(R.id.tvStatus);
-            ivArrow = v.findViewById(R.id.ivArrow);
-            panelDetail = v.findViewById(R.id.panelDetail);
-            panelStatus = v.findViewById(R.id.panelStatus);
-            btnChangeStatus = v.findViewById(R.id.btnChangeStatus);
-            btnDelete = v.findViewById(R.id.btnDelete);
-            btnSaveStatus = v.findViewById(R.id.btnSaveStatus);
-            spStatus = v.findViewById(R.id.spStatus);
-        }
-    }
 
-    private int getStatusIndex(String s) {
-        switch (s) {
-            case "Dipanggil":        return 1;
-            case "Sedang Dilayani":   return 2;
-            case "Selesai":           return 3;
-            case "Dibatalkan":        return 4;
-            default:                  return 0;
+        public UserViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvName = itemView.findViewById(R.id.tvName);
+            tvNumber = itemView.findViewById(R.id.tvNumber);
+            tvStatus = itemView.findViewById(R.id.tvStatus);
+            ivArrow = itemView.findViewById(R.id.ivArrow);
+            panelDetail = itemView.findViewById(R.id.panelDetail);
+            panelStatus = itemView.findViewById(R.id.panelStatus);
+            btnChangeStatus = itemView.findViewById(R.id.btnChangeStatus);
+            btnSaveStatus = itemView.findViewById(R.id.btnSaveStatus);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
+            spStatus = itemView.findViewById(R.id.spStatus);
         }
     }
 }
