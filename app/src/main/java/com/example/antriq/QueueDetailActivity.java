@@ -1,24 +1,32 @@
 package com.example.antriq;
 
+import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.widget.Button;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.firebase.database.*;
+
 import java.util.*;
 
-public class QueueDetailActivity extends AppCompatActivity implements QueueUserAdapter.OnUserClickListener {
+public class QueueDetailActivity extends AppCompatActivity
+        implements QueueUserAdapter.OnUserClickListener {
 
     private RecyclerView recyclerView;
     private QueueUserAdapter adapter;
-    private List<UserInQueue> userList = new ArrayList<>();
-    private String queueId;
+    private final List<UserInQueue> userList = new ArrayList<>();
 
-    private Handler handler = new Handler();
+    private String queueId;
+    private final Handler handler = new Handler();
     private final Map<String, Runnable> timers = new HashMap<>();
+    private Button btnDeleteQueue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,9 +35,10 @@ public class QueueDetailActivity extends AppCompatActivity implements QueueUserA
 
         recyclerView = findViewById(R.id.rvQueueUsers);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new QueueUserAdapter(userList, this);
         recyclerView.setAdapter(adapter);
+
+        btnDeleteQueue = findViewById(R.id.btnDeleteQueue);
 
         queueId = getIntent().getStringExtra("queueId");
         if (queueId == null || queueId.isEmpty()) {
@@ -38,84 +47,151 @@ public class QueueDetailActivity extends AppCompatActivity implements QueueUserA
             return;
         }
 
-        fetchUsersInQueue(queueId);
+        setupQueueListeners();
+
+        btnDeleteQueue.setOnClickListener(v -> showDeleteConfirmation());
     }
 
-    private void fetchUsersInQueue(String queueId) {
+    private void setupQueueListeners() {
+        DatabaseReference queueRef = FirebaseDatabase.getInstance()
+                .getReference("queues").child(queueId);
+
+        // Pantau jika antrian dihapus
+        queueRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    Toast.makeText(QueueDetailActivity.this,
+                            "Antrian telah dihapus", Toast.LENGTH_SHORT).show();
+                    redirectToDashboard();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(QueueDetailActivity.this,
+                        "Gagal membaca antrian", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Pantau data user dalam antrian
+        queueRef.child("users").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                userList.clear();
+                boolean allFinished = true;
+
+                for (DataSnapshot snap : snapshot.getChildren()) {
+                    UserInQueue u = snap.getValue(UserInQueue.class);
+                    if (u != null) {
+                        u.userId = snap.getKey(); // Ambil userId dari key Firebase
+                        userList.add(u);
+
+                        String status = u.status;
+                        if (status != null && (
+                                status.equals("Menunggu") ||
+                                        status.equals("Dipanggil") ||
+                                        status.equals("Sedang Dilayani"))) {
+                            allFinished = false;
+                        }
+                    }
+                }
+
+                adapter.setUserList(userList);
+
+                if (userList.isEmpty() || allFinished) {
+                    Toast.makeText(QueueDetailActivity.this,
+                            "Antrian selesai", Toast.LENGTH_SHORT).show();
+                    redirectToDashboard();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(QueueDetailActivity.this,
+                        "Gagal memuat data pengguna", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showDeleteConfirmation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Konfirmasi Hapus")
+                .setMessage("Yakin ingin menghapus antrian ini? Semua data akan hilang.")
+                .setPositiveButton("Hapus", (dialog, which) -> deleteQueue())
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void deleteQueue() {
         FirebaseDatabase.getInstance().getReference("queues")
                 .child(queueId)
-                .child("users")
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        userList.clear();
-                        for (DataSnapshot userSnapshot : snapshot.getChildren()) {
-                            UserInQueue user = userSnapshot.getValue(UserInQueue.class);
-                            if (user != null) {
-                                userList.add(user);
-                            }
-                        }
-                        adapter.setUserList(userList);
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(QueueDetailActivity.this, "Gagal memuat data", Toast.LENGTH_SHORT).show();
-                    }
+                .removeValue()
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(this, "Antrian berhasil dihapus", Toast.LENGTH_SHORT).show();
+                    redirectToDashboard();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Gagal menghapus antrian", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void redirectToDashboard() {
+        Intent intent = new Intent(this, AdminDashboardActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
     @Override
     public void onUpdateStatus(UserInQueue user, String newStatus) {
-        String uid = user.email.replace(".", "_");
-        FirebaseDatabase.getInstance()
-                .getReference("queues")
+        String uid = user.userId;
+        FirebaseDatabase.getInstance().getReference("queues")
                 .child(queueId)
                 .child("users")
                 .child(uid)
                 .child("status")
                 .setValue(newStatus);
 
-        if ("Dipanggil".equals(newStatus)) startCallTimer(user);
-        else cancelCallTimer(user);
+        if ("Dipanggil".equals(newStatus)) {
+            startCallTimer(uid);
+        } else {
+            cancelCallTimer(uid);
+        }
     }
 
-    /* dipanggil adapter ketika admin tekan hapus */
     @Override
     public void onDelete(UserInQueue user) {
-        String uid = user.email.replace(".", "_");
-        FirebaseDatabase.getInstance()
-                .getReference("queues")
+        String uid = user.userId;
+        FirebaseDatabase.getInstance().getReference("queues")
                 .child(queueId)
                 .child("users")
                 .child(uid)
                 .removeValue();
+        cancelCallTimer(uid);
     }
 
-    private void startCallTimer(UserInQueue user) {
-        String userId = user.email.replace(".", "_");
-        cancelCallTimer(user);
+    private void startCallTimer(String uid) {
+        cancelCallTimer(uid);
 
-        Runnable runnable = () -> {
+        Runnable task = () -> {
             FirebaseDatabase.getInstance().getReference("queues")
                     .child(queueId)
                     .child("users")
-                    .child(userId)
+                    .child(uid)
                     .child("status")
                     .setValue("Dibatalkan");
-            timers.remove(userId);
+            timers.remove(uid);
         };
 
-        handler.postDelayed(runnable, 5 * 60 * 1000); // 5 menit
-        timers.put(userId, runnable);
+        handler.postDelayed(task, 5 * 60 * 1000); // 5 menit
+        timers.put(uid, task);
     }
 
-    private void cancelCallTimer(UserInQueue user) {
-        String userId = user.email.replace(".", "_");
-        Runnable runnable = timers.get(userId);
-        if (runnable != null) {
-            handler.removeCallbacks(runnable);
-            timers.remove(userId);
+    private void cancelCallTimer(String uid) {
+        Runnable task = timers.remove(uid);
+        if (task != null) {
+            handler.removeCallbacks(task);
         }
     }
 }
