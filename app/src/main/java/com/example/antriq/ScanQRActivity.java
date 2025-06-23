@@ -85,7 +85,6 @@ public class ScanQRActivity extends AppCompatActivity {
                             .addOnFailureListener(e -> Toast.makeText(ScanQRActivity.this, "Gagal masuk antrian", Toast.LENGTH_SHORT).show());
                 }
             }
-
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Toast.makeText(ScanQRActivity.this, "Database error", Toast.LENGTH_SHORT).show();
