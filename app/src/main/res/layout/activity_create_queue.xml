@@ -1,29 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:padding="16dp"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingBottom="16dp"
+    android:paddingTop="0dp"
+    android:background="#FFFFFF"
+    android:fitsSystemWindows="false">
 
-    <EditText
-        android:id="@+id/etQueueName"
-        android:hint="Nama Antrian"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <Button
+    <!-- Tombol New Queue -->
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnCreateQueue"
-        android:text="Buat Antrian"
-        android:layout_width="match_parent"
+        android:layout_width="225dp"
+        android:layout_height="72dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="0dp"
+        android:layout_marginBottom="39dp"
+        android:background="@drawable/btn_top_rounded"
+        android:padding="0dp"
+        android:text="New Queue"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginBottom="39dp"
+        android:text="Service HP Cepat"
+        android:textColor="#000000"
+        android:textSize="25sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="126dp"
+        android:layout_height="52dp"
+        android:layout_marginBottom="30dp"
+        android:background="#B71C1C"
+        android:gravity="center"
+        android:padding="8dp"
+        android:text="Your Queue"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold" />
 
     <ImageView
         android:id="@+id/ivQRCode"
-        android:layout_width="300dp"
-        android:layout_height="300dp"
-        android:layout_marginTop="20dp"
+        android:layout_width="194dp"
+        android:layout_height="190dp"
+        android:layout_marginBottom="100dp"
+        android:scaleType="fitCenter"
+        android:visibility="visible" />
+
+    <Button
+        android:layout_width="232dp"
+        android:layout_height="wrap_content"
+        android:backgroundTint="#B71C1C"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:text="Cancel"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etQueueName"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:visibility="gone" />
 
 </LinearLayout>

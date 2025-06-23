@@ -1,0 +1,5 @@
+<!-- res/drawable/btn_top_rounded.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#B71C1C" />
+    <corners android:bottomLeftRadius="32dp" android:bottomRightRadius="32dp" />
+</shape>
