@@ -10,21 +10,28 @@
 
     <TextView
         android:id="@+id/tvWelcomeAdmin"
-        android:layout_width="match_parent"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/welcome_home_admin_border"
+        android:padding="12dp"
         android:text="Selamat datang, Admin"
+        android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:paddingBottom="12dp" />
+        android:gravity="center" />
 
     <Button
         android:id="@+id/btnAddQueue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Tambah Antrian"
-        android:backgroundTint="@color/design_default_color_primary"
+        android:backgroundTint="#C62828"
         android:textColor="@android:color/white"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="16dp"
+        android:textStyle="bold"
+        android:padding="12dp" />
 
     <TextView
         android:id="@+id/tvListLabel"
@@ -33,14 +40,35 @@
         android:text="Daftar Antrian"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="10dp"
+        android:gravity="center" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvQueues"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="8dp" />
+        android:background="@drawable/border_recycler_view"
+        android:padding="8dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvQueues"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="20dp" />
+    </FrameLayout>
+
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Log Out"
+        android:backgroundTint="#C62828"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="16dp"
+        android:textStyle="bold"
+        android:padding="1dp" />
 
 </LinearLayout>
