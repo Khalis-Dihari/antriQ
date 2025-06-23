@@ -1,5 +1,6 @@
 package com.example.antriq;
 
+import android.net.Uri;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -14,7 +15,7 @@ import com.google.firebase.database.*;
 public class UserDashboardActivity extends AppCompatActivity {
 
     private TextView tvQueueNumber, tvStatus, tvTimer, tvAdminName;
-    private Button btnScanQR, btnLogout, btnLeaveQueue;
+    private Button btnScanQR, btnLogout, btnLeaveQueue, btnOpenMaps;
 
     private String currentQueueId = null;
     private CountDownTimer timer;
@@ -32,6 +33,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         btnScanQR = findViewById(R.id.btnScanQR);
         btnLogout = findViewById(R.id.btnLogout);
         btnLeaveQueue = findViewById(R.id.btnLeaveQueue);
+        btnOpenMaps = findViewById(R.id.btn_open_maps); // ✅ pindahkan ke sini
 
         btnLogout.setOnClickListener(v -> {
             FirebaseAuth.getInstance().signOut();
@@ -59,8 +61,24 @@ public class UserDashboardActivity extends AppCompatActivity {
             }
         });
 
+        // ✅ Tambahkan listener button open maps
+        btnOpenMaps.setOnClickListener(v -> {
+            Uri gmmIntentUri = Uri.parse("https://maps.app.goo.gl/JfwkPEey2Kj336kDA");
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(mapIntent);
+            } else {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+                startActivity(browserIntent);
+            }
+        });
+
         checkStatus();
     }
+
+    // (sisa kode tidak berubah)
+
 
     private void checkStatus() {
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -93,6 +111,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         tvStatus.setText("Status: " + u.status);
         btnLeaveQueue.setVisibility(u.status.equals("Selesai") || u.status.equals("Dibatalkan") ? View.VISIBLE : View.GONE);
         if ("Dipanggil".equals(u.status)) startTimer(); else stopTimer();
+        btnOpenMaps.setVisibility(View.VISIBLE);
         FirebaseDatabase.getInstance().getReference("users").child(adminId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override public void onDataChange(@NonNull DataSnapshot s) {
@@ -125,6 +144,7 @@ public class UserDashboardActivity extends AppCompatActivity {
         tvTimer.setVisibility(View.GONE);
         tvAdminName.setText("Retail: -");
         btnLeaveQueue.setVisibility(View.GONE);
+        btnOpenMaps.setVisibility(View.GONE);
         stopTimer();
     }
 
